@@ -1,25 +1,27 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import Register from './components/Auth/Register';
 import Login from './components/Auth/Login';
 import Home from './components/Home';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import ProtectedRoute from './utils/ProtectedRoute'; // Import ProtectedRoute
+import ProtectedRoute from './utils/ProtectedRoute';
 
-// Dummy Dashboard component
+// Host Components
+import HostDashboard from './components/Host/HostDashboard';
+import CreateProperty from './components/Host/CreateProperty'; // New component
+
+// Dashboard (from previous step, can reuse for demonstration)
 function Dashboard() {
   const { user, token } = useAuth();
   const [users, setUsers] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
 
-  // Example of an authenticated API call using the configured axios instance
   React.useEffect(() => {
     const fetchUsers = async () => {
       try {
-        // Import the configured axios instance
         const apiClient = (await import('./utils/axiosConfig')).default;
-        const response = await apiClient.get('/users'); // This will automatically include the token
+        const response = await apiClient.get('/users');
         setUsers(response.data);
         setLoading(false);
       } catch (err) {
@@ -29,7 +31,7 @@ function Dashboard() {
       }
     };
 
-    if (token) { // Only fetch if authenticated (token exists)
+    if (token) {
       fetchUsers();
     }
   }, [token]);
@@ -77,6 +79,10 @@ function AuthNav() {
         {isAuthenticated && (
           <>
             <Link to="/dashboard" style={{ marginRight: '15px' }}>Dashboard</Link>
+            {/* Show Host Dashboard link only if user is a host */}
+            {user && user.role === 'host' && (
+              <Link to="/host/dashboard" style={{ marginRight: '15px' }}>Host Dashboard</Link>
+            )}
             {user && <span style={{ marginLeft: '15px', fontWeight: 'bold' }}>Welcome, {user.username || user.firstName}!</span>}
           </>
         )}
@@ -112,12 +118,21 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
 
-            {/* Protected Routes Group */}
+            {/* Protected Routes Group - Accessible by any authenticated user */}
             <Route element={<ProtectedRoute />}>
-              {/* Routes nested here will require authentication */}
               <Route path="/dashboard" element={<Dashboard />} />
-              {/* Future routes like /properties/create, /bookings, /profile etc. will go here */}
             </Route>
+
+            {/* Host Specific Protected Routes */}
+            {/* For more robust role-based routing, you could create a specific HostProtectedRoute */}
+            {/* For now, we rely on the backend for strict host-only checks */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/host/dashboard" element={<HostDashboard />} />
+              <Route path="/host/properties/new" element={<CreateProperty />} />
+            </Route>
+
+            {/* Catch-all for 404 - Optional */}
+            <Route path="*" element={<h1>404 Not Found</h1>} />
           </Routes>
         </div>
       </AuthProvider>
