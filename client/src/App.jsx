@@ -10,6 +10,9 @@ import ProtectedRoute from './utils/ProtectedRoute';
 import HostDashboard from './components/Host/HostDashboard';
 import CreateProperty from './components/Host/CreateProperty'; // New component
 
+// Property Components
+import PropertyDetail from './components/Property/PropertyDetail'; // Import PropertyDetail
+
 // Dashboard (from previous step, can reuse for demonstration)
 function Dashboard() {
   const { user, token } = useAuth();
@@ -118,17 +121,19 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
 
+            {/* Property Detail Route (Publicly Accessible) */}
+            <Route path="/properties/:id" element={<PropertyDetail />} />
+
             {/* Protected Routes Group - Accessible by any authenticated user */}
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<Dashboard />} />
             </Route>
 
             {/* Host Specific Protected Routes */}
-            {/* For more robust role-based routing, you could create a specific HostProtectedRoute */}
-            {/* For now, we rely on the backend for strict host-only checks */}
             <Route element={<ProtectedRoute />}>
               <Route path="/host/dashboard" element={<HostDashboard />} />
               <Route path="/host/properties/new" element={<CreateProperty />} />
+              {/* Future host routes like /host/properties/:id/edit etc. will go here */}
             </Route>
 
             {/* Catch-all for 404 - Optional */}

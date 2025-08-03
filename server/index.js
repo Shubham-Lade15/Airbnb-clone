@@ -212,6 +212,71 @@ app.post(
   }
 );
 
+// GET all properties (Publicly Accessible)
+app.get('/api/properties', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT
+          p.property_id,
+          p.title,
+          p.description,
+          p.city,
+          p.state,
+          p.country,
+          p.price_per_night,
+          p.num_guests,
+          p.num_bedrooms,
+          p.num_bathrooms,
+          p.property_type,
+          p.images,
+          u.first_name AS host_first_name,
+          u.last_name AS host_last_name
+      FROM properties p
+      JOIN users u ON p.host_id = u.user_id
+      WHERE p.is_available = TRUE
+      ORDER BY p.created_at DESC;
+    `);
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error('Error fetching properties:', error);
+    res.status(500).json({ message: 'Server error fetching properties.' });
+  }
+});
+
+// GET a single property by ID (Publicly Accessible)
+app.get('/api/properties/:id', async (req, res) => {
+  const { id } = req.params; // Get the property ID from URL parameters
+
+  try {
+    const result = await pool.query(`
+      SELECT
+          p.*, -- Select all columns from properties
+          u.first_name AS host_first_name,
+          u.last_name AS host_last_name,
+          u.profile_picture_url AS host_profile_picture_url,
+          u.bio AS host_bio
+      FROM properties p
+      JOIN users u ON p.host_id = u.user_id
+      WHERE p.property_id = $1;
+    `, [id]);
+
+    const property = result.rows[0];
+
+    if (!property) {
+      return res.status(404).json({ message: 'Property not found.' });
+    }
+
+    res.status(200).json(property);
+  } catch (error) {
+    console.error('Error fetching single property:', error);
+    // If the ID is not a valid UUID format, PostgreSQL will throw an error
+    if (error.code === '22P02') { // invalid_text_representation
+      return res.status(400).json({ message: 'Invalid property ID format.' });
+    }
+    res.status(500).json({ message: 'Server error fetching property.' });
+  }
+});
+
 // Start the server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
