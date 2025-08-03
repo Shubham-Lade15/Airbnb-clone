@@ -3,7 +3,62 @@ import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Register from './components/Auth/Register';
 import Login from './components/Auth/Login';
 import Home from './components/Home';
-import { AuthProvider, useAuth } from './context/AuthContext'; // Import AuthProvider and useAuth
+import { AuthProvider, useAuth } from './context/AuthContext';
+import ProtectedRoute from './utils/ProtectedRoute'; // Import ProtectedRoute
+
+// Dummy Dashboard component
+function Dashboard() {
+  const { user, token } = useAuth();
+  const [users, setUsers] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState('');
+
+  // Example of an authenticated API call using the configured axios instance
+  React.useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        // Import the configured axios instance
+        const apiClient = (await import('./utils/axiosConfig')).default;
+        const response = await apiClient.get('/users'); // This will automatically include the token
+        setUsers(response.data);
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching users in dashboard:', err.response?.data || err);
+        setError(err.response?.data?.message || 'Failed to fetch users.');
+        setLoading(false);
+      }
+    };
+
+    if (token) { // Only fetch if authenticated (token exists)
+      fetchUsers();
+    }
+  }, [token]);
+
+
+  if (loading) return <p>Loading users...</p>;
+  if (error) return <p style={{color: 'red'}}>Error: {error}</p>;
+
+  return (
+    <div>
+      <h2>Dashboard - Protected Content</h2>
+      {user && <p>Hello, {user.username} ({user.role})! This content is only visible to logged-in users.</p>}
+
+      <h3>Registered Users (from protected API)</h3>
+      {users.length > 0 ? (
+        <ul>
+          {users.map(u => (
+            <li key={u.user_id}>
+              {u.username} ({u.email}) - {u.role}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>No users fetched yet or database is empty.</p>
+      )}
+    </div>
+  );
+}
+
 
 // Component for conditional navigation links
 function AuthNav() {
@@ -19,8 +74,11 @@ function AuthNav() {
             <Link to="/login">Login</Link>
           </>
         )}
-        {isAuthenticated && user && (
-          <span style={{ marginLeft: '15px', fontWeight: 'bold' }}>Welcome, {user.username || user.firstName}!</span>
+        {isAuthenticated && (
+          <>
+            <Link to="/dashboard" style={{ marginRight: '15px' }}>Dashboard</Link>
+            {user && <span style={{ marginLeft: '15px', fontWeight: 'bold' }}>Welcome, {user.username || user.firstName}!</span>}
+          </>
         )}
       </div>
       {isAuthenticated && (
@@ -46,14 +104,20 @@ function AuthNav() {
 function App() {
   return (
     <Router>
-      <AuthProvider> {/* Wrap the entire application with AuthProvider */}
-        <AuthNav /> {/* Use the new conditional navigation component */}
+      <AuthProvider>
+        <AuthNav />
         <div style={{ padding: '20px' }}>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
-            {/* More routes will go here */}
+
+            {/* Protected Routes Group */}
+            <Route element={<ProtectedRoute />}>
+              {/* Routes nested here will require authentication */}
+              <Route path="/dashboard" element={<Dashboard />} />
+              {/* Future routes like /properties/create, /bookings, /profile etc. will go here */}
+            </Route>
           </Routes>
         </div>
       </AuthProvider>

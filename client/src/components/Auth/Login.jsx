@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import apiClient from '../../utils/axiosConfig'; // Import the custom axios instance
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext'; // Import useAuth
+import { useAuth } from '../../context/AuthContext';
 
 function Login() {
   const [formData, setFormData] = useState({
@@ -11,7 +11,7 @@ function Login() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { login } = useAuth(); // Get the login function from context
+  const { login } = useAuth();
 
   const { email, password } = formData;
 
@@ -25,13 +25,12 @@ function Login() {
     setError('');
 
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL}/users/login`, formData);
+      const res = await apiClient.post('/users/login', formData); // Use apiClient
 
-      // Use the login function from context to update global state
       login(res.data.token, res.data.user);
 
       setMessage(res.data.message);
-      navigate('/'); // Redirect to home after successful login
+      navigate('/');
     } catch (err) {
       console.error(err.response?.data || err);
       setError(err.response?.data?.message || 'Login failed. Please check your credentials.');

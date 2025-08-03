@@ -1,19 +1,14 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import apiClient from '../../utils/axiosConfig'; // Import the custom axios instance
 import { useNavigate } from 'react-router-dom';
 
 function Register() {
   const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: '',
-    firstName: '',
-    lastName: '',
-    role: 'guest', // Default role
+    username: '', email: '', password: '', firstName: '', lastName: '', role: 'guest',
   });
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const navigate = useNavigate(); // For redirecting after successful registration
+  const navigate = useNavigate();
 
   const { username, email, password, firstName, lastName, role } = formData;
 
@@ -27,13 +22,12 @@ function Register() {
     setError('');
 
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL}/users/register`, formData);
+      const res = await apiClient.post('/users/register', formData); // Use apiClient
       setMessage(res.data.message);
-      // Clear form or redirect
       setFormData({
         username: '', email: '', password: '', firstName: '', lastName: '', role: 'guest'
       });
-      navigate('/login'); // Redirect to login page
+      navigate('/login');
     } catch (err) {
       console.error(err.response?.data || err);
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
