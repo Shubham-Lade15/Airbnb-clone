@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext'; // Import useAuth
 
 function Login() {
   const [formData, setFormData] = useState({
@@ -10,6 +11,7 @@ function Login() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth(); // Get the login function from context
 
   const { email, password } = formData;
 
@@ -24,16 +26,12 @@ function Login() {
 
     try {
       const res = await axios.post(`${import.meta.env.VITE_API_URL}/users/login`, formData);
-      // Store the JWT token in localStorage
-      localStorage.setItem('token', res.data.token);
-      // Store user info (optional, but good for display)
-      localStorage.setItem('user', JSON.stringify(res.data.user));
+
+      // Use the login function from context to update global state
+      login(res.data.token, res.data.user);
 
       setMessage(res.data.message);
-      // Redirect to home or dashboard after successful login
-      navigate('/');
-      // You might want to refresh the page or update context to reflect login state
-      window.location.reload(); // Simple way to refresh app state
+      navigate('/'); // Redirect to home after successful login
     } catch (err) {
       console.error(err.response?.data || err);
       setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
