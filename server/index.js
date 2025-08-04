@@ -277,6 +277,183 @@ app.get('/api/properties/:id', async (req, res) => {
   }
 });
 
+// PUT Update a Property Listing (Protected - Host Only, Owner Only)
+app.put(
+  '/api/properties/:id',
+  authenticateToken, // Ensure user is logged in
+  authorizeRole(['host']), // Ensure user has 'host' role
+  upload.array('images', 10), // Multer middleware for images (optional, if images are updated)
+  async (req, res) => {
+    const { id } = req.params; // Property ID from URL
+    const hostId = req.user.user.id; // Host ID from authenticated user
+
+    const {
+      title, description, address, city, state, zipCode, country,
+      latitude, longitude, pricePerNight, numGuests, numBedrooms,
+      numBeds, numBathrooms, propertyType, amenities, isAvailable
+    } = req.body;
+
+    try {
+      // First, fetch the existing property to verify ownership
+      const existingPropertyResult = await pool.query(
+        'SELECT host_id, images, amenities FROM properties WHERE property_id = $1;',
+        [id]
+      );
+
+      const existingProperty = existingPropertyResult.rows[0];
+      if (!existingProperty) {
+        return res.status(404).json({ message: 'Property not found.' });
+      }
+
+      // Check if the authenticated host is the owner of this property
+      if (existingProperty.host_id !== hostId) {
+        return res.status(403).json({ message: 'Access denied: You do not own this property.' });
+      }
+
+      let imageUrls = existingProperty.images; // Default to existing images
+
+      // If new images are uploaded, replace existing ones with new Cloudinary URLs
+      if (req.files && req.files.length > 0) {
+        console.log(`New images received for property ID: ${id}. Uploading to Cloudinary.`);
+        const uploadedImages = await uploadMultipleImages(req.files, 'airbnb-properties');
+        imageUrls = uploadedImages.map(img => img.secure_url);
+        // TODO: In a production app, you might want to delete old images from Cloudinary here
+      } else {
+         // If no new files, and frontend sent 'images' as a string JSON, parse it
+         // This handles cases where frontend sends back existing image URLs as part of the form
+        if (req.body.images && typeof req.body.images === 'string') {
+            try {
+                const parsedImages = JSON.parse(req.body.images);
+                if (Array.isArray(parsedImages)) {
+                    imageUrls = parsedImages;
+                }
+            } catch (parseError) {
+                console.warn("Could not parse images field as JSON array from body, using existing images.", parseError);
+                // Fallback: continue using existingProperty.images if parsing fails
+            }
+        }
+      }
+
+      // Convert amenities string (if provided) to array or use existing
+      const amenitiesArray = (amenities !== undefined)
+        ? amenities.split(',').map(item => item.trim())
+        : existingProperty.amenities;
+
+      // Construct the dynamic UPDATE query
+      const updateFields = [];
+      const updateValues = [];
+      let paramIndex = 1;
+
+      const addField = (field, value) => {
+        if (value !== undefined && value !== '') { // Only add if value is provided and not an empty string
+          updateFields.push(`${field} = $${paramIndex++}`);
+          updateValues.push(value);
+        }
+      };
+
+      // Use the helper to add fields only if they exist
+      addField('title', title);
+      addField('description', description);
+      addField('address', address);
+      addField('city', city);
+      addField('state', state);
+      addField('zip_code', zipCode);
+      addField('country', country);
+      addField('latitude', latitude ? parseFloat(latitude) : undefined);
+      addField('longitude', longitude ? parseFloat(longitude) : undefined);
+      addField('price_per_night', pricePerNight ? parseFloat(pricePerNight) : undefined);
+      addField('num_guests', numGuests ? parseInt(numGuests) : undefined);
+      addField('num_bedrooms', numBedrooms ? parseInt(numBedrooms) : undefined);
+      addField('num_beds', numBeds ? parseInt(numBeds) : undefined);
+      addField('num_bathrooms', numBathrooms ? parseFloat(numBathrooms) : undefined);
+      addField('property_type', propertyType);
+      addField('amenities', amenitiesArray);
+      addField('images', imageUrls); // Always update images based on logic above
+      addField('is_available', isAvailable); // For toggling availability
+
+      // If no fields to update, return early
+      if (updateFields.length === 0) {
+        return res.status(400).json({ message: 'No valid fields provided for update.' });
+      }
+
+      const query = `
+        UPDATE properties
+        SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP
+        WHERE property_id = $${paramIndex++} AND host_id = $${paramIndex++}
+        RETURNING *;
+      `;
+
+      updateValues.push(id, hostId); // Add WHERE clause values
+
+      const result = await pool.query(query, updateValues);
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ message: 'Property not found or you do not own it.' });
+      }
+
+      res.status(200).json({
+        message: 'Property updated successfully!',
+        property: result.rows[0]
+      });
+
+    } catch (error) {
+      console.error('Error updating property:', error);
+      if (error.code === '22P02') { // Invalid text representation (e.g., non-numeric for price)
+        return res.status(400).json({ message: 'Invalid data format for numeric fields.' });
+      }
+      res.status(500).json({ message: 'Server error updating property.' });
+    }
+  }
+);
+
+// DELETE a Property Listing (Protected - Host Only, Owner Only)
+app.delete(
+  '/api/properties/:id',
+  authenticateToken, // Ensure user is logged in
+  authorizeRole(['host']), // Ensure user has 'host' role
+  async (req, res) => {
+    const { id } = req.params; // Property ID from URL
+    const hostId = req.user.user.id; // Host ID from authenticated user
+
+    try {
+      // First, verify ownership and get image URLs for potential deletion from Cloudinary
+      const propertyResult = await pool.query(
+        'SELECT host_id, images FROM properties WHERE property_id = $1;',
+        [id]
+      );
+
+      const property = propertyResult.rows[0];
+      if (!property) {
+        return res.status(404).json({ message: 'Property not found.' });
+      }
+
+      // Check if the authenticated host is the owner
+      if (property.host_id !== hostId) {
+        return res.status(403).json({ message: 'Access denied: You do not own this property.' });
+      }
+
+      // Delete the property from the database
+      const deleteResult = await pool.query(
+        'DELETE FROM properties WHERE property_id = $1 AND host_id = $2 RETURNING *;',
+        [id, hostId]
+      );
+
+      if (deleteResult.rows.length === 0) {
+        return res.status(404).json({ message: 'Property not found or could not be deleted.' });
+      }
+
+      res.status(200).json({ message: 'Property deleted successfully!', deletedProperty: deleteResult.rows[0] });
+
+    } catch (error) {
+      console.error('Error deleting property:', error);
+      if (error.code === '22P02') {
+        return res.status(400).json({ message: 'Invalid property ID format.' });
+      }
+      res.status(500).json({ message: 'Server error deleting property.' });
+    }
+  }
+);
+
 // Start the server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
