@@ -212,69 +212,85 @@ app.post(
   }
 );
 
-// GET all properties (Publicly Accessible)
+// GET all properties (Publicly Accessible) - Place the general route first
 app.get('/api/properties', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT
-          p.property_id,
-          p.title,
-          p.description,
-          p.city,
-          p.state,
-          p.country,
-          p.price_per_night,
-          p.num_guests,
-          p.num_bedrooms,
-          p.num_bathrooms,
-          p.property_type,
-          p.images,
-          u.first_name AS host_first_name,
-          u.last_name AS host_last_name
-      FROM properties p
-      JOIN users u ON p.host_id = u.user_id
-      WHERE p.is_available = TRUE
-      ORDER BY p.created_at DESC;
-    `);
-    res.status(200).json(result.rows);
-  } catch (error) {
-    console.error('Error fetching properties:', error);
-    res.status(500).json({ message: 'Server error fetching properties.' });
-  }
+    try {
+        const result = await pool.query(`
+            SELECT
+                p.property_id,
+                p.title,
+                p.description,
+                p.city,
+                p.state,
+                p.country,
+                p.price_per_night,
+                p.num_guests,
+                p.num_bedrooms,
+                p.num_bathrooms,
+                p.property_type,
+                p.images,
+                u.first_name AS host_first_name,
+                u.last_name AS host_last_name
+            FROM properties p
+            JOIN users u ON p.host_id = u.user_id
+            WHERE p.is_available = TRUE
+            ORDER BY p.created_at DESC;
+        `);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error('Error fetching properties:', error);
+        res.status(500).json({ message: 'Server error fetching properties.' });
+    }
 });
 
-// GET a single property by ID (Publicly Accessible)
+// GET properties owned by the authenticated host (Protected - Host Only)
+// This more specific route must come BEFORE the :id route
+app.get('/api/properties/host', authenticateToken, authorizeRole(['host']), async (req, res) => {
+    const hostId = req.user.user.id;
+    try {
+        const result = await pool.query(`
+            SELECT
+                property_id, title, city, country, price_per_night, images
+            FROM properties
+            WHERE host_id = $1
+            ORDER BY created_at DESC;
+        `, [hostId]);
+
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error('Error fetching host properties:', error);
+        res.status(500).json({ message: 'Server error fetching host properties.' });
+    }
+});
+
+// GET a single property by ID (Publicly Accessible) - Place the general route last
 app.get('/api/properties/:id', async (req, res) => {
-  const { id } = req.params; // Get the property ID from URL parameters
+    const { id } = req.params;
+    try {
+        const result = await pool.query(`
+            SELECT
+                p.*,
+                u.first_name AS host_first_name,
+                u.last_name AS host_last_name,
+                u.profile_picture_url AS host_profile_picture_url,
+                u.bio AS host_bio
+            FROM properties p
+            JOIN users u ON p.host_id = u.user_id
+            WHERE p.property_id = $1;
+        `, [id]);
 
-  try {
-    const result = await pool.query(`
-      SELECT
-          p.*, -- Select all columns from properties
-          u.first_name AS host_first_name,
-          u.last_name AS host_last_name,
-          u.profile_picture_url AS host_profile_picture_url,
-          u.bio AS host_bio
-      FROM properties p
-      JOIN users u ON p.host_id = u.user_id
-      WHERE p.property_id = $1;
-    `, [id]);
-
-    const property = result.rows[0];
-
-    if (!property) {
-      return res.status(404).json({ message: 'Property not found.' });
+        const property = result.rows[0];
+        if (!property) {
+            return res.status(404).json({ message: 'Property not found.' });
+        }
+        res.status(200).json(property);
+    } catch (error) {
+        console.error('Error fetching single property:', error);
+        if (error.code === '22P02') {
+            return res.status(400).json({ message: 'Invalid property ID format.' });
+        }
+        res.status(500).json({ message: 'Server error fetching property.' });
     }
-
-    res.status(200).json(property);
-  } catch (error) {
-    console.error('Error fetching single property:', error);
-    // If the ID is not a valid UUID format, PostgreSQL will throw an error
-    if (error.code === '22P02') { // invalid_text_representation
-      return res.status(400).json({ message: 'Invalid property ID format.' });
-    }
-    res.status(500).json({ message: 'Server error fetching property.' });
-  }
 });
 
 // PUT Update a Property Listing (Protected - Host Only, Owner Only)

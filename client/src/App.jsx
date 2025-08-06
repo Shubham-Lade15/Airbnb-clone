@@ -8,7 +8,8 @@ import ProtectedRoute from './utils/ProtectedRoute';
 
 // Host Components
 import HostDashboard from './components/Host/HostDashboard';
-import CreateProperty from './components/Host/CreateProperty'; // New component
+import CreateProperty from './components/Host/CreateProperty';
+import EditProperty from './components/Host/EditProperty'; 
 
 // Property Components
 import PropertyDetail from './components/Property/PropertyDetail'; // Import PropertyDetail
@@ -133,6 +134,7 @@ function App() {
             <Route element={<ProtectedRoute />}>
               <Route path="/host/dashboard" element={<HostDashboard />} />
               <Route path="/host/properties/new" element={<CreateProperty />} />
+              <Route path="/host/properties/edit/:id" element={<EditProperty />} />
               {/* Future host routes like /host/properties/:id/edit etc. will go here */}
             </Route>
 
