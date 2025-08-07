@@ -14,6 +14,8 @@ import EditProperty from './components/Host/EditProperty';
 // Property Components
 import PropertyDetail from './components/Property/PropertyDetail'; // Import PropertyDetail
 
+import Trips from './components/User/Trips'
+
 // Dashboard (from previous step, can reuse for demonstration)
 function Dashboard() {
   const { user, token } = useAuth();
@@ -81,14 +83,15 @@ function AuthNav() {
           </>
         )}
         {isAuthenticated && (
-          <>
-            <Link to="/dashboard" style={{ marginRight: '15px' }}>Dashboard</Link>
+          <div>
+            <Link to="/dashboard" style={{ marginRight: '15px' }}>Dashboard</Link> 
+            <Link to="/" >Home</Link>
             {/* Show Host Dashboard link only if user is a host */}
-            {user && user.role === 'host' && (
-              <Link to="/host/dashboard" style={{ marginRight: '15px' }}>Host Dashboard</Link>
-            )}
-            {user && <span style={{ marginLeft: '15px', fontWeight: 'bold' }}>Welcome, {user.username || user.firstName}!</span>}
-          </>
+            {user && user.role === 'host' && (<Link to="/host/dashboard">Host Dashboard</Link>)}
+            {user && user.role === 'guest' && (<Link to="/trips">Trips</Link>)} {/* Add Trips link for guests */}
+            {user && user.role !== 'guest' && user.role !== 'host' && (<Link to="/dashboard">Dashboard</Link>)}
+            {user && <span>Welcome, {user.username}!</span>}
+          </div>
         )}
       </div>
       {isAuthenticated && (
@@ -111,9 +114,7 @@ function AuthNav() {
   );
 }
 
-function Trips() {
-  return <h2>Your Trips (Coming Soon!)</h2>;
-}
+
 
 function App() {
   return (

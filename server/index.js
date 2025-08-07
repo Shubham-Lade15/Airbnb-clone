@@ -539,6 +539,30 @@ app.post(
   }
 );
 
+// GET all bookings for the authenticated guest (Protected - Guest Only)
+app.get('/api/bookings/guest', authenticateToken, authorizeRole(['guest']), async (req, res) => {
+    const guestId = req.user.user.id;
+    try {
+        const result = await pool.query(`
+            SELECT
+                b.booking_id, b.check_in_date, b.check_out_date, b.total_guests, b.total_price, b.status,
+                p.title AS property_title, p.city AS property_city, p.country AS property_country,
+                p.images AS property_images, p.property_id,
+                u.first_name AS host_first_name, u.last_name AS host_last_name
+            FROM bookings b
+            JOIN properties p ON b.property_id = p.property_id
+            JOIN users u ON p.host_id = u.user_id
+            WHERE b.guest_id = $1
+            ORDER BY b.created_at DESC;
+        `, [guestId]);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error('Error fetching guest bookings:', error);
+        res.status(500).json({ message: 'Server error fetching your bookings.' });
+    }
+  }
+);
+
 // Start the server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
