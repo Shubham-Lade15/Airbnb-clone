@@ -111,6 +111,10 @@ function AuthNav() {
   );
 }
 
+function Trips() {
+  return <h2>Your Trips (Coming Soon!)</h2>;
+}
+
 function App() {
   return (
     <Router>
@@ -128,6 +132,7 @@ function App() {
             {/* Protected Routes Group - Accessible by any authenticated user */}
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/trips" element={<Trips />} /> 
             </Route>
 
             {/* Host Specific Protected Routes */}
@@ -135,7 +140,7 @@ function App() {
               <Route path="/host/dashboard" element={<HostDashboard />} />
               <Route path="/host/properties/new" element={<CreateProperty />} />
               <Route path="/host/properties/edit/:id" element={<EditProperty />} />
-              {/* Future host routes like /host/properties/:id/edit etc. will go here */}
+              {/* Future host routes */}
             </Route>
 
             {/* Catch-all for 404 - Optional */}
