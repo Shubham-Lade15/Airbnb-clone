@@ -470,6 +470,75 @@ app.delete(
   }
 );
 
+// POST Create a new booking (Protected - Guest Only)
+app.post(
+  '/api/bookings',
+  authenticateToken, // Ensure user is logged in
+  authorizeRole(['guest']), // Ensure user has 'guest' role
+  async (req, res) => {
+    const { propertyId, checkInDate, checkOutDate, totalGuests } = req.body;
+    const guestId = req.user.user.id; // Get the guest's ID from the JWT payload
+
+    // Basic input validation
+    if (!propertyId || !checkInDate || !checkOutDate || !totalGuests) {
+      return res.status(400).json({ message: 'All booking fields are required.' });
+    }
+
+    try {
+      // Check if the property exists and get its price
+      const propertyResult = await pool.query(
+        'SELECT price_per_night FROM properties WHERE property_id = $1;',
+        [propertyId]
+      );
+      const property = propertyResult.rows[0];
+      if (!property) {
+        return res.status(404).json({ message: 'Property not found.' });
+      }
+
+      // Check for date conflicts
+      const conflictResult = await pool.query(
+        `SELECT booking_id FROM bookings
+         WHERE property_id = $1
+           AND (
+             (check_in_date, check_out_date) OVERLAPS ($2::date, $3::date)
+           );`,
+        [propertyId, checkInDate, checkOutDate]
+      );
+
+      if (conflictResult.rows.length > 0) {
+        return res.status(409).json({ message: 'These dates are not available for booking.' });
+      }
+
+      // Calculate total price
+      const checkIn = new Date(checkInDate);
+      const checkOut = new Date(checkOutDate);
+      const oneDay = 24 * 60 * 60 * 1000; // milliseconds in a day
+      const numberOfNights = Math.round(Math.abs((checkOut - checkIn) / oneDay));
+      const totalPrice = numberOfNights * parseFloat(property.price_per_night);
+
+      // Create the booking
+      const newBookingResult = await pool.query(
+        `INSERT INTO bookings (guest_id, property_id, check_in_date, check_out_date, total_guests, total_price)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING *;`,
+        [guestId, propertyId, checkInDate, checkOutDate, totalGuests, totalPrice]
+      );
+
+      res.status(201).json({
+        message: 'Booking created successfully!',
+        booking: newBookingResult.rows[0]
+      });
+
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      if (error.code === '22007' || error.code === '22008') { // invalid_datetime_format
+          return res.status(400).json({ message: 'Invalid date format provided.' });
+      }
+      res.status(500).json({ message: 'Server error creating booking.' });
+    }
+  }
+);
+
 // Start the server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
