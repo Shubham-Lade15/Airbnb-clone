@@ -5,8 +5,11 @@ function PropertyCard({ property }) {
   if (!property) return null;
 
   const imageUrl = property.images && property.images.length > 0
-    ? property.images[0] // Display the first image
-    : 'https://via.placeholder.com/300x200?text=No+Image'; // Placeholder if no image
+    ? property.images[0]
+    : 'https://via.placeholder.com/300x200?text=No+Image';
+  
+  const averageRating = parseFloat(property.average_rating).toFixed(2);
+  const displayRating = property.review_count > 0 ? `${averageRating} ★ (${property.review_count})` : 'New';
 
   return (
     <div style={{
@@ -29,9 +32,14 @@ function PropertyCard({ property }) {
         <div style={{ padding: '15px' }}>
           <h3 style={{ margin: '0 0 10px 0', fontSize: '1.2em' }}>{property.title}</h3>
           <p style={{ margin: '0 0 5px 0', color: '#555' }}>{property.city}, {property.country}</p>
-          <p style={{ margin: '0 0 5px 0', fontWeight: 'bold', fontSize: '1.1em' }}>
-            ₹{property.price_per_night} / night
-          </p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+            <p style={{ margin: '0', fontWeight: 'bold', fontSize: '1.1em' }}>
+              ₹{property.price_per_night} / night
+            </p>
+            <p style={{ margin: '0', fontSize: '0.9em', color: '#777' }}>
+              {displayRating}
+            </p>
+          </div>
           <p style={{ margin: '0', fontSize: '0.9em', color: '#777' }}>
             {property.num_guests} guests · {property.num_bedrooms} beds · {property.num_bathrooms} baths
           </p>

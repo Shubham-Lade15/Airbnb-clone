@@ -212,49 +212,36 @@ app.post(
   }
 );
 
-// GET all properties (Publicly Accessible, with Filtering)
+// GET all properties (Publicly Accessible, with Filtering and average rating)
 app.get('/api/properties', async (req, res) => {
     const { location, checkIn, checkOut, guests } = req.query;
-
     try {
         let query = `
             SELECT
-                p.property_id,
-                p.title,
-                p.description,
-                p.city,
-                p.state,
-                p.country,
-                p.price_per_night,
-                p.num_guests,
-                p.num_bedrooms,
-                p.num_bathrooms,
-                p.property_type,
-                p.images,
-                u.first_name AS host_first_name,
-                u.last_name AS host_last_name
+                p.property_id, p.title, p.description, p.city, p.state, p.country,
+                p.price_per_night, p.num_guests, p.num_bedrooms, p.num_bathrooms,
+                p.property_type, p.images, u.first_name AS host_first_name,
+                u.last_name AS host_last_name,
+                AVG(r.rating) AS average_rating,
+                COUNT(r.review_id) AS review_count
             FROM properties p
             JOIN users u ON p.host_id = u.user_id
+            LEFT JOIN reviews r ON p.property_id = r.property_id
             WHERE p.is_available = TRUE
         `;
         const queryValues = [];
         let paramIndex = 1;
 
-        // Add location filter
         if (location) {
             query += ` AND (p.city ILIKE $${paramIndex} OR p.state ILIKE $${paramIndex} OR p.country ILIKE $${paramIndex})`;
             queryValues.push(`%${location}%`);
             paramIndex++;
         }
-
-        // Add guest count filter
         if (guests) {
             query += ` AND p.num_guests >= $${paramIndex}`;
             queryValues.push(parseInt(guests));
             paramIndex++;
         }
-
-        // Add date availability filter (the most important part)
         if (checkIn && checkOut) {
             query += ` AND NOT EXISTS (
                 SELECT 1 FROM bookings
@@ -267,7 +254,7 @@ app.get('/api/properties', async (req, res) => {
             paramIndex += 2;
         }
 
-        query += ` ORDER BY p.created_at DESC;`;
+        query += ` GROUP BY p.property_id, u.user_id ORDER BY p.created_at DESC;`;
 
         const result = await pool.query(query, queryValues);
         res.status(200).json(result.rows);
@@ -297,7 +284,7 @@ app.get('/api/properties/host', authenticateToken, authorizeRole(['host']), asyn
     }
 });
 
-// GET a single property by ID (Publicly Accessible) - Place the general route last
+// GET a single property by ID (Publicly Accessible)
 app.get('/api/properties/:id', async (req, res) => {
     const { id } = req.params;
     try {
@@ -307,13 +294,18 @@ app.get('/api/properties/:id', async (req, res) => {
                 u.first_name AS host_first_name,
                 u.last_name AS host_last_name,
                 u.profile_picture_url AS host_profile_picture_url,
-                u.bio AS host_bio
+                u.bio AS host_bio,
+                AVG(r.rating) AS average_rating,
+                COUNT(r.review_id) AS review_count
             FROM properties p
             JOIN users u ON p.host_id = u.user_id
-            WHERE p.property_id = $1;
+            LEFT JOIN reviews r ON p.property_id = r.property_id
+            WHERE p.property_id = $1
+            GROUP BY p.property_id, u.user_id;
         `, [id]);
 
         const property = result.rows[0];
+
         if (!property) {
             return res.status(404).json({ message: 'Property not found.' });
         }
@@ -617,6 +609,77 @@ app.get('/api/bookings/host', authenticateToken, authorizeRole(['host']), async 
     } catch (error) {
         console.error('Error fetching host bookings:', error);
         res.status(500).json({ message: 'Server error fetching your bookings.' });
+    }
+});
+
+// GET all reviews for a single property (Publicly Accessible)
+app.get('/api/reviews/property/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query(`
+            SELECT
+                r.review_id, r.rating, r.comment, r.created_at,
+                u.first_name, u.last_name, u.profile_picture_url
+            FROM reviews r
+            JOIN users u ON r.reviewer_id = u.user_id
+            WHERE r.property_id = $1
+            ORDER BY r.created_at DESC;
+        `, [id]);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error('Error fetching property reviews:', error);
+        res.status(500).json({ message: 'Server error fetching reviews.' });
+    }
+});
+
+// POST a new review for a property (Protected - Guest Only)
+app.post('/api/reviews', authenticateToken, authorizeRole(['guest']), async (req, res) => {
+    const { propertyId, bookingId, rating, comment } = req.body;
+    const reviewerId = req.user.user.id;
+
+    if (!propertyId || !bookingId || !rating) {
+        return res.status(400).json({ message: 'Property ID, booking ID, and rating are required.' });
+    }
+
+    try {
+        // Validation: Check if the user is the one who made the booking
+        const bookingResult = await pool.query(`
+            SELECT check_out_date FROM bookings
+            WHERE booking_id = $1 AND guest_id = $2;
+        `, [bookingId, reviewerId]);
+
+        const booking = bookingResult.rows[0];
+        if (!booking) {
+            return res.status(403).json({ message: 'Access denied: You can only review your own bookings.' });
+        }
+
+        // Validation: Ensure the booking is completed (check-out date is in the past)
+        const now = new Date();
+        const checkOutDate = new Date(booking.check_out_date);
+        if (checkOutDate > now) {
+            return res.status(400).json({ message: 'You can only review a property after your stay is complete.' });
+        }
+        
+        // Validation: Ensure a review for this booking doesn't already exist (handled by UNIQUE constraint in DB)
+        
+        // Insert the new review
+        const result = await pool.query(`
+            INSERT INTO reviews (booking_id, reviewer_id, property_id, rating, comment)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING *;
+        `, [bookingId, reviewerId, propertyId, rating, comment]);
+
+        res.status(201).json({
+            message: 'Review submitted successfully!',
+            review: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('Error submitting review:', error);
+        if (error.code === '23505') { // UNIQUE constraint violation
+            return res.status(409).json({ message: 'You have already reviewed this booking.' });
+        }
+        res.status(500).json({ message: 'Server error submitting review.' });
     }
 });
 
