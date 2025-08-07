@@ -683,6 +683,37 @@ app.post('/api/reviews', authenticateToken, authorizeRole(['guest']), async (req
     }
 });
 
+// GET check review eligibility for a guest (Protected - Guest Only)
+app.get('/api/bookings/check-review-eligibility/:propertyId', authenticateToken, authorizeRole(['guest']), async (req, res) => {
+    const { propertyId } = req.params;
+    const guestId = req.user.user.id;
+    try {
+        const result = await pool.query(`
+            SELECT booking_id FROM bookings
+            WHERE guest_id = $1
+            AND property_id = $2
+            AND check_out_date < CURRENT_DATE
+            AND NOT EXISTS (
+                SELECT 1 FROM reviews
+                WHERE reviews.booking_id = bookings.booking_id
+            );
+        `, [guestId, propertyId]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'No eligible booking found for review.' });
+        }
+
+        res.status(200).json({
+            isEligible: true,
+            bookingId: result.rows[0].booking_id
+        });
+
+    } catch (error) {
+        console.error('Error checking review eligibility:', error);
+        res.status(500).json({ message: 'Server error checking eligibility.' });
+    }
+});
+
 // Start the server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
