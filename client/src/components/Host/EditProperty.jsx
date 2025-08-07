@@ -15,25 +15,12 @@ function EditProperty() {
   });
   const [images, setImages] = useState([]);
   const [existingImages, setExistingImages] = useState([]);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-
-  // Simple styles for layout
-  const formGroupStyle = { marginBottom: '15px' };
-  const labelStyle = { display: 'block', marginBottom: '5px', fontWeight: 'bold' };
-  const inputStyle = { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' };
-  const textareaStyle = { ...inputStyle, minHeight: '80px' };
-  const fileInputStyle = { ...inputStyle, padding: '5px' };
-  const buttonStyle = {
-    padding: '12px 20px', backgroundColor: '#007bff', color: 'white', border: 'none',
-    borderRadius: '5px', cursor: 'pointer', fontSize: '16px', width: '100%'
-  };
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchProperty = async () => {
-      setLoading(true);
       try {
         const res = await apiClient.get(`/properties/${id}`);
         const property = res.data;
@@ -78,7 +65,6 @@ function EditProperty() {
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    setMessage('');
     setError('');
     setSubmitting(true);
 
@@ -87,12 +73,9 @@ function EditProperty() {
       data.append(key, formData[key]);
     }
 
-    // Append new image files. These will replace existing ones on the backend.
     if (images.length > 0) {
         images.forEach(image => data.append('images', image));
     } else {
-        // If no new images are selected, send the existing image URLs back as a JSON string.
-        // Our backend PUT route is designed to handle this.
         data.append('images', JSON.stringify(existingImages));
     }
 
@@ -102,7 +85,6 @@ function EditProperty() {
           'Content-Type': 'multipart/form-data',
         },
       });
-      setMessage(res.data.message);
       setSubmitting(false);
       navigate('/host/dashboard', { state: { successMessage: res.data.message } });
     } catch (err) {
@@ -112,112 +94,100 @@ function EditProperty() {
     }
   };
 
-  if (loading) return <p>Loading property details...</p>;
-  if (error) return <p style={{ color: 'red' }}>Error: {error}</p>;
+  if (loading) return <p className="text-center mt-10 text-gray-500">Loading property details...</p>;
+  if (error) return <p className="text-center mt-10 text-red-500">Error: {error}</p>;
 
   return (
-    <div style={{ maxWidth: '800px', margin: '50px auto', padding: '30px', border: '1px solid #eee', borderRadius: '8px', boxShadow: '0 4px 12px rgba' }}>
-      <h2>Edit Property</h2>
-      {message && <p style={{ color: 'green', backgroundColor: '#e6ffe6', padding: '10px', borderRadius: '4px' }}>{message}</p>}
-      {error && <p style={{ color: 'red', backgroundColor: '#ffe6e6', padding: '10px', borderRadius: '4px' }}>{error}</p>}
-      {submitting && <p style={{ color: '#007bff' }}>Updating property, please wait...</p>}
+    <div className="container mx-auto px-4 py-8 max-w-4xl bg-white rounded-xl shadow-lg mt-8">
+      <h2 className="text-3xl font-bold text-center text-gray-800 mb-6">Edit Property</h2>
+      {submitting && <p className="text-sky-600 text-center mb-4">Updating property, please wait...</p>}
 
-      <form onSubmit={onSubmit}>
-        <div style={formGroupStyle}>
-          <label htmlFor="title" style={labelStyle}>Title:</label>
-          <input type="text" id="title" name="title" value={formData.title} onChange={onChange} required style={inputStyle} />
+      <form onSubmit={onSubmit} className="space-y-6">
+        <div className="grid md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Title:</label>
+            <input type="text" name="title" value={formData.title} onChange={onChange} required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-sky-500 focus:border-sky-500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Description:</label>
+            <textarea name="description" value={formData.description} onChange={onChange} required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-sky-500 focus:border-sky-500"></textarea>
+          </div>
+          <div className="col-span-2">
+            <label className="flex items-center text-sm font-medium text-gray-700 space-x-2">
+              <input type="checkbox" name="isAvailable" checked={formData.isAvailable} onChange={onChange} className="form-checkbox h-5 w-5 text-sky-600 rounded" />
+              <span>Is Available</span>
+            </label>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Address:</label>
+            <input type="text" name="address" value={formData.address} onChange={onChange} required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-sky-500 focus:border-sky-500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">City:</label>
+            <input type="text" name="city" value={formData.city} onChange={onChange} required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-sky-500 focus:border-sky-500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">State:</label>
+            <input type="text" name="state" value={formData.state} onChange={onChange} required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-sky-500 focus:border-sky-500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Zip Code:</label>
+            <input type="text" name="zipCode" value={formData.zipCode} onChange={onChange} required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-sky-500 focus:border-sky-500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Country:</label>
+            <input type="text" name="country" value={formData.country} onChange={onChange} required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-sky-500 focus:border-sky-500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Price per Night (₹):</label>
+            <input type="number" step="0.01" name="pricePerNight" value={formData.pricePerNight} onChange={onChange} required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-sky-500 focus:border-sky-500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Max Guests:</label>
+            <input type="number" name="numGuests" value={formData.numGuests} onChange={onChange} required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-sky-500 focus:border-sky-500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Bedrooms:</label>
+            <input type="number" name="numBedrooms" value={formData.numBedrooms} onChange={onChange} required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-sky-500 focus:border-sky-500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Beds:</label>
+            <input type="number" name="numBeds" value={formData.numBeds} onChange={onChange} required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-sky-500 focus:border-sky-500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Bathrooms:</label>
+            <input type="number" step="0.5" name="numBathrooms" value={formData.numBathrooms} onChange={onChange} required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-sky-500 focus:border-sky-500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Property Type:</label>
+            <select name="propertyType" value={formData.propertyType} onChange={onChange} required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-sky-500 focus:border-sky-500">
+              <option value="Apartment">Apartment</option>
+              <option value="House">House</option>
+              <option value="Condo">Condo</option>
+              <option value="Villa">Villa</option>
+              <option value="Cabin">Cabin</option>
+              <option value="Bungalow">Bungalow</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Amenities (comma-separated):</label>
+            <input type="text" name="amenities" value={formData.amenities} onChange={onChange} placeholder="e.g., WiFi, AC, Pool" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-sky-500 focus:border-sky-500" />
+          </div>
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700">Property Images (Replacing Existing):</label>
+            {existingImages.length > 0 && (
+              <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {existingImages.map((img, index) => (
+                      <img key={index} src={img} alt="Existing" className="w-full h-24 object-cover rounded-md" />
+                  ))}
+              </div>
+            )}
+            <input type="file" name="images" multiple accept="image/*" onChange={onImageChange} className="mt-2 block w-full text-sm text-gray-900 border border-gray-300 rounded-md cursor-pointer file:bg-sky-50 file:border-0 file:text-sky-700 hover:file:bg-sky-100" />
+            {images.length > 0 && <p className="mt-1 text-sm text-gray-500">{images.length} new file(s) selected. These will replace the existing images.</p>}
+          </div>
         </div>
-        <div style={formGroupStyle}>
-          <label htmlFor="description" style={labelStyle}>Description:</label>
-          <textarea id="description" name="description" value={formData.description} onChange={onChange} required style={textareaStyle}></textarea>
-        </div>
-        <div style={formGroupStyle}>
-          <label htmlFor="isAvailable" style={labelStyle}>Is Available:</label>
-          <input type="checkbox" id="isAvailable" name="isAvailable" checked={formData.isAvailable} onChange={onChange} />
-        </div>
-        <div style={formGroupStyle}>
-          <label htmlFor="address" style={labelStyle}>Address:</label>
-          <input type="text" id="address" name="address" value={formData.address} onChange={onChange} required style={inputStyle} />
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-            <div style={formGroupStyle}>
-                <label htmlFor="city" style={labelStyle}>City:</label>
-                <input type="text" id="city" name="city" value={formData.city} onChange={onChange} required style={inputStyle} />
-            </div>
-            <div style={formGroupStyle}>
-                <label htmlFor="state" style={labelStyle}>State:</label>
-                <input type="text" id="state" name="state" value={formData.state} onChange={onChange} required style={inputStyle} />
-            </div>
-            <div style={formGroupStyle}>
-                <label htmlFor="zipCode" style={labelStyle}>Zip Code:</label>
-                <input type="text" id="zipCode" name="zipCode" value={formData.zipCode} onChange={onChange} required style={inputStyle} />
-            </div>
-            <div style={formGroupStyle}>
-                <label htmlFor="country" style={labelStyle}>Country:</label>
-                <input type="text" id="country" name="country" value={formData.country} onChange={onChange} required style={inputStyle} />
-            </div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-            <div style={formGroupStyle}>
-                <label htmlFor="latitude" style={labelStyle}>Latitude (Optional):</label>
-                <input type="number" step="any" id="latitude" name="latitude" value={formData.latitude} onChange={onChange} style={inputStyle} />
-            </div>
-            <div style={formGroupStyle}>
-                <label htmlFor="longitude" style={labelStyle}>Longitude (Optional):</label>
-                <input type="number" step="any" id="longitude" name="longitude" value={formData.longitude} onChange={onChange} style={inputStyle} />
-            </div>
-        </div>
-        <div style={formGroupStyle}>
-          <label htmlFor="pricePerNight" style={labelStyle}>Price per Night (INR):</label>
-          <input type="number" step="0.01" id="pricePerNight" name="pricePerNight" value={formData.pricePerNight} onChange={onChange} required style={inputStyle} />
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '15px' }}>
-            <div style={formGroupStyle}>
-                <label htmlFor="numGuests" style={labelStyle}>Max Guests:</label>
-                <input type="number" id="numGuests" name="numGuests" value={formData.numGuests} onChange={onChange} required style={inputStyle} />
-            </div>
-            <div style={formGroupStyle}>
-                <label htmlFor="numBedrooms" style={labelStyle}>Bedrooms:</label>
-                <input type="number" id="numBedrooms" name="numBedrooms" value={formData.numBedrooms} onChange={onChange} required style={inputStyle} />
-            </div>
-            <div style={formGroupStyle}>
-                <label htmlFor="numBeds" style={labelStyle}>Beds:</label>
-                <input type="number" id="numBeds" name="numBeds" value={formData.numBeds} onChange={onChange} required style={inputStyle} />
-            </div>
-            <div style={formGroupStyle}>
-                <label htmlFor="numBathrooms" style={labelStyle}>Bathrooms:</label>
-                <input type="number" step="0.5" id="numBathrooms" name="numBathrooms" value={formData.numBathrooms} onChange={onChange} required style={inputStyle} />
-            </div>
-        </div>
-        <div style={formGroupStyle}>
-          <label htmlFor="propertyType" style={labelStyle}>Property Type:</label>
-          <select id="propertyType" name="propertyType" value={formData.propertyType} onChange={onChange} required style={inputStyle}>
-            <option value="Apartment">Apartment</option>
-            <option value="House">House</option>
-            <option value="Condo">Condo</option>
-            <option value="Villa">Villa</option>
-            <option value="Cabin">Cabin</option>
-            <option value="Bungalow">Bungalow</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-        <div style={formGroupStyle}>
-          <label htmlFor="amenities" style={labelStyle}>Amenities (comma-separated):</label>
-          <input type="text" id="amenities" name="amenities" value={formData.amenities} onChange={onChange} placeholder="e.g., WiFi, AC, Pool, Kitchen" style={inputStyle} />
-        </div>
-        <div style={formGroupStyle}>
-          <label htmlFor="images" style={labelStyle}>Property Images (Replacing Existing):</label>
-          {existingImages.length > 0 && (
-            <div style={{ marginBottom: '10px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '10px' }}>
-                {existingImages.map((img, index) => (
-                    <img key={index} src={img} alt="Existing" style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '4px' }} />
-                ))}
-            </div>
-          )}
-          <input type="file" id="images" name="images" multiple accept="image/*" onChange={onImageChange} style={fileInputStyle} />
-          {images.length > 0 && <p style={{ fontSize: '0.9em', color: '#666', marginTop: '5px' }}>{images.length} new file(s) selected. These will replace the existing images.</p>}
-        </div>
-        <button type="submit" disabled={submitting} style={buttonStyle}>
+        <button type="submit" disabled={submitting} className="w-full bg-sky-600 text-white font-medium py-3 px-6 rounded-md shadow-md hover:bg-sky-700 focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 transition-colors disabled:opacity-50">
           {submitting ? 'Updating...' : 'Update Property'}
         </button>
       </form>

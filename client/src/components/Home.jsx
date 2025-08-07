@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import apiClient from '../utils/axiosConfig';
 import PropertyCard from './Property/PropertyCard';
-import SearchBar from './SearchBar'; // Import the new SearchBar component
+import SearchBar from './SearchBar';
 
 function Home() {
   const [properties, setProperties] = useState([]);
@@ -32,24 +32,19 @@ function Home() {
       }
     };
     fetchProperties();
-  }, [searchParams]); // Re-fetch whenever search parameters change
+  }, [searchParams]);
 
-  if (loading) return <p>Loading properties...</p>;
-  if (error) return <p style={{ color: 'red' }}>Error: {error}</p>;
+  if (loading) return <p className="text-center mt-10 text-gray-500">Loading properties...</p>;
+  if (error) return <p className="text-center mt-10 text-red-500">Error: {error}</p>;
 
   return (
-    <div>
-      <SearchBar /> {/* Place the search bar at the top */}
-      <h1>Available Properties</h1>
+    <div className="container mx-auto px-4 mt-8">
+      <SearchBar />
+      <h1 className="text-3xl font-bold mb-6 text-gray-800">Available Properties</h1>
       {properties.length === 0 ? (
-        <p>No properties match your search criteria. Please try different dates or locations.</p>
+        <p className="text-center text-gray-500">No properties match your search criteria. Please try different dates or locations.</p>
       ) : (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-          gap: '20px',
-          marginTop: '20px'
-        }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {properties.map(property => (
             <PropertyCard key={property.property_id} property={property} />
           ))}

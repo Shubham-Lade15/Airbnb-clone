@@ -27,7 +27,6 @@ function PropertyDetail() {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewEligibility, setReviewEligibility] = useState(null);
 
-  // Fetch property details and reviews
   useEffect(() => {
     const fetchPropertyData = async () => {
       try {
@@ -43,9 +42,8 @@ function PropertyDetail() {
       }
     };
     fetchPropertyData();
-  }, [id, reviewSubmitted]); // Refetch when a new review is submitted
+  }, [id, reviewSubmitted]);
 
-  // Check review eligibility for logged-in guest
   useEffect(() => {
     if (isAuthenticated && user.role === 'guest' && !reviewSubmitted) {
       const checkEligibility = async () => {
@@ -54,7 +52,6 @@ function PropertyDetail() {
           setReviewEligibility(res.data);
         } catch (err) {
           console.error('Error checking review eligibility:', err);
-          // If no completed booking, backend returns 404, we'll just set eligibility to null
           setReviewEligibility(null);
         }
       };
@@ -62,7 +59,6 @@ function PropertyDetail() {
     }
   }, [id, isAuthenticated, user, reviewSubmitted]);
 
-  // Booking form logic
   useEffect(() => {
     if (bookingData.checkInDate && bookingData.checkOutDate && property) {
       const checkIn = new Date(bookingData.checkInDate);
@@ -105,7 +101,6 @@ function PropertyDetail() {
     }
   };
 
-  // Review form logic
   const onReviewChange = (e) => {
     const { name, value } = e.target;
     setReviewForm({ ...reviewForm, [name]: value });
@@ -121,8 +116,8 @@ function PropertyDetail() {
             rating: reviewForm.rating,
             comment: reviewForm.comment,
         });
-        setReviewSubmitted(true); // Trigger refetch of reviews
-        setReviewForm({ rating: 0, comment: '' }); // Clear form
+        setReviewSubmitted(true);
+        setReviewForm({ rating: 0, comment: '' });
     } catch (err) {
         console.error('Error submitting review:', err.response?.data || err);
         setError(err.response?.data?.message || 'Failed to submit review.');
@@ -131,136 +126,128 @@ function PropertyDetail() {
     }
   };
 
-  if (loading) return <p>Loading property details...</p>;
-  if (error) return <p style={{ color: 'red' }}>Error: {error}</p>;
-  if (!property) return <p>Property not found.</p>;
+  if (loading) return <p className="text-center mt-10 text-gray-500">Loading property details...</p>;
+  if (error) return <p className="text-center mt-10 text-red-500">Error: {error}</p>;
+  if (!property) return <p className="text-center mt-10 text-gray-500">Property not found.</p>;
 
-  const bookingFormStyle = { display: 'flex', flexDirection: 'column', gap: '15px' };
-  const inputGroupStyle = { display: 'flex', flexDirection: 'column', gap: '5px' };
-  const buttonStyle = { padding: '12px', backgroundColor: '#ff5a5f', color: 'white', border: 'none', borderRadius: '5px', fontSize: '1.1em', cursor: 'pointer', marginTop: '10px' };
+  const averageRating = parseFloat(property.average_rating).toFixed(2);
+  const displayRating = property.review_count > 0 ? `${averageRating} ★ (${property.review_count})` : 'New';
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '50px auto', padding: '20px', border: '1px solid #eee', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', backgroundColor: '#fff' }}>
-      <h1>{property.title}</h1>
-      <p style={{ color: '#555', fontSize: '1.1em' }}>{property.city}, {property.state}, {property.country}</p>
-
-      {/* ... (Existing Image Gallery) ... */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '10px', marginTop: '20px' }}>
-        {property.images && property.images.map((imgUrl, index) => (
-          <img key={index} src={imgUrl} alt={`${property.title} image ${index + 1}`} style={{ width: '100%', height: '200px', objectFit: 'cover', borderRadius: '4px' }} />
-        ))}
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '30px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
-        <div style={{ flex: 2, marginRight: '30px' }}>
-          <h2>About this space</h2>
-          <p>{property.description}</p>
-          <p><strong>Property Type:</strong> {property.property_type}</p>
-          <p><strong>Max Guests:</strong> {property.num_guests}</p>
-          <p><strong>Bedrooms:</strong> {property.num_bedrooms}</p>
-          <p><strong>Beds:</strong> {property.num_beds}</p>
-          <p><strong>Bathrooms:</strong> {property.num_bathrooms}</p>
-
-          <h3>Amenities</h3>
-          {property.amenities && property.amenities.length > 0 ? (
-            <ul style={{ listStyle: 'none', padding: 0 }}>
-              {property.amenities.map((amenity, index) => (
-                <li key={index} style={{ marginBottom: '5px', paddingLeft: '20px', position: 'relative' }}>
-                  <span style={{ position: 'absolute', left: 0 }}>✅</span> {amenity}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>No specific amenities listed.</p>
-          )}
+    <div className="container mx-auto px-4 py-8">
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+          {property.images && property.images.map((imgUrl, index) => (
+            <img key={index} src={imgUrl} alt={`${property.title} image ${index + 1}`} className="w-full h-64 object-cover" />
+          ))}
         </div>
-
-        <div style={{ flex: 1, border: '1px solid #ccc', borderRadius: '8px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-          <form onSubmit={onBookingSubmit} style={bookingFormStyle}>
-            <h3>₹{property.price_per_night} / night</h3>
-            {bookingMessage && <p style={{ color: 'green', marginBottom: '10px' }}>{bookingMessage}</p>}
-            {bookingError && <p style={{ color: 'red', marginBottom: '10px' }}>{bookingError}</p>}
-            <div style={inputGroupStyle}>
-              <label>Check-in</label>
-              <input type="date" name="checkInDate" value={bookingData.checkInDate} onChange={onBookingChange} required style={{ padding: '8px' }} />
+        <div className="p-6">
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-800">{property.title}</h1>
+              <p className="text-lg text-gray-600">{property.city}, {property.state}, {property.country}</p>
             </div>
-            <div style={inputGroupStyle}>
-              <label>Check-out</label>
-              <input type="date" name="checkOutDate" value={bookingData.checkOutDate} onChange={onBookingChange} required style={{ padding: '8px' }} />
-            </div>
-            <div style={inputGroupStyle}>
-              <label>Guests</label>
-              <input type="number" name="totalGuests" value={bookingData.totalGuests} onChange={onBookingChange} min="1" max={property.num_guests} required style={{ padding: '8px' }} />
-            </div>
-            {nights > 0 && <p style={{ fontWeight: 'bold' }}>Total: ₹{totalPrice} for {nights} night(s)</p>}
-            <button type="submit" disabled={submittingBooking || nights <= 0} style={buttonStyle}>
-              {submittingBooking ? 'Booking...' : 'Book Now'}
-            </button>
-          </form>
-        </div>
-      </div>
-
-      <div style={{ marginTop: '30px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
-        <h3>Hosted by {property.host_first_name} {property.host_last_name}</h3>
-        {property.host_profile_picture_url && (
-          <img src={property.host_profile_picture_url} alt="Host Profile" style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', marginRight: '15px' }} />
-        )}
-        <p>{property.host_bio || 'No bio available.'}</p>
-      </div>
-
-      <div style={{ marginTop: '30px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
-        <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          Reviews
-          <span style={{ fontSize: '1.2em' }}>{property.review_count > 0 ? `${parseFloat(property.average_rating).toFixed(2)} ★ (${property.review_count})` : 'New'}</span>
-        </h3>
-        
-        {/* Review Submission Form */}
-        {isAuthenticated && user.role === 'guest' && reviewEligibility && !reviewSubmitted && (
-          <form onSubmit={onReviewSubmit} style={{ marginBottom: '30px', padding: '20px', border: '1px solid #ddd', borderRadius: '8px' }}>
-            <h4>Leave a Review</h4>
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                <label>Rating:</label>
-                <select name="rating" value={reviewForm.rating} onChange={onReviewChange} required>
-                    <option value="0">Select</option>
-                    <option value="1">1 ★</option>
-                    <option value="2">2 ★</option>
-                    <option value="3">3 ★</option>
-                    <option value="4">4 ★</option>
-                    <option value="5">5 ★</option>
-                </select>
-            </div>
-            <div style={{ marginBottom: '10px' }}>
-                <label>Comment:</label>
-                <textarea name="comment" value={reviewForm.comment} onChange={onReviewChange} style={{ width: '100%', minHeight: '80px' }}></textarea>
-            </div>
-            <button type="submit" disabled={submittingReview} style={{ padding: '8px 15px', backgroundColor: '#ff5a5f', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                {submittingReview ? 'Submitting...' : 'Submit Review'}
-            </button>
-          </form>
-        )}
-        
-        {/* Display existing reviews */}
-        {reviews.length === 0 ? (
-          <p>Be the first to leave a review!</p>
-        ) : (
-          <div style={{ display: 'grid', gap: '20px' }}>
-            {reviews.map(review => (
-              <div key={review.review_id} style={{ border: '1px solid #eee', padding: '15px', borderRadius: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-                  <img src={review.profile_picture_url || 'https://via.placeholder.com/40'} alt={`${review.first_name}`} style={{ width: '40px', height: '40px', borderRadius: '50%', marginRight: '10px' }} />
-                  <div>
-                    <p style={{ margin: 0, fontWeight: 'bold' }}>{review.first_name} {review.last_name}</p>
-                    <span style={{ fontSize: '0.9em', color: '#777' }}>
-                      {new Date(review.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-                <p style={{ margin: '0 0 10px 0' }}>{'★'.repeat(review.rating)}</p>
-                <p style={{ margin: 0 }}>{review.comment}</p>
-              </div>
-            ))}
+            <span className="text-lg font-medium text-gray-600">{displayRating}</span>
           </div>
-        )}
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="md:col-span-2">
+              <h2 className="text-2xl font-semibold text-gray-800 mb-2">About this space</h2>
+              <p className="text-gray-700 mb-4">{property.description}</p>
+              <div className="grid grid-cols-2 gap-2 text-gray-700">
+                <p><strong>Property Type:</strong> {property.property_type}</p>
+                <p><strong>Max Guests:</strong> {property.num_guests}</p>
+                <p><strong>Bedrooms:</strong> {property.num_bedrooms}</p>
+                <p><strong>Beds:</strong> {property.num_beds}</p>
+                <p><strong>Bathrooms:</strong> {property.num_bathrooms}</p>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-2">Amenities</h3>
+              {property.amenities && property.amenities.length > 0 ? (
+                <ul className="grid grid-cols-2 gap-1 text-gray-700 list-disc list-inside">
+                  {property.amenities.map((amenity, index) => (
+                    <li key={index}>{amenity}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-gray-500">No specific amenities listed.</p>
+              )}
+            </div>
+
+            <div className="bg-gray-50 p-6 rounded-xl shadow-inner md:col-span-1">
+              <form onSubmit={onBookingSubmit}>
+                <h3 className="text-xl font-bold text-gray-800 mb-4">₹{property.price_per_night} / night</h3>
+                {bookingMessage && <p className="text-green-500 mb-4">{bookingMessage}</p>}
+                {bookingError && <p className="text-red-500 mb-4">{bookingError}</p>}
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Check-in</label>
+                      <input type="date" name="checkInDate" value={bookingData.checkInDate} onChange={onBookingChange} required className="mt-1 block w-full p-2 border border-gray-300 rounded-md" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Check-out</label>
+                      <input type="date" name="checkOutDate" value={bookingData.checkOutDate} onChange={onBookingChange} required className="mt-1 block w-full p-2 border border-gray-300 rounded-md" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Guests</label>
+                    <input type="number" name="totalGuests" value={bookingData.totalGuests} onChange={onBookingChange} min="1" max={property.num_guests} required className="mt-1 block w-full p-2 border border-gray-300 rounded-md" />
+                  </div>
+                  {nights > 0 && <p className="text-lg font-semibold mt-4">Total: ₹{totalPrice} for {nights} night(s)</p>}
+                  <button type="submit" disabled={submittingBooking || nights <= 0} className="w-full bg-sky-600 text-white font-medium py-3 rounded-md shadow-md hover:bg-sky-700 transition-colors disabled:opacity-50">
+                    {submittingBooking ? 'Booking...' : 'Book Now'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div className="mt-8 border-t pt-8">
+            <h3 className="text-2xl font-semibold text-gray-800 mb-4">Reviews</h3>
+            {isAuthenticated && user.role === 'guest' && reviewEligibility && !reviewSubmitted && (
+              <form onSubmit={onReviewSubmit} className="bg-gray-50 p-6 rounded-xl shadow-inner mb-6">
+                <h4 className="text-lg font-semibold mb-4">Leave a Review</h4>
+                <div className="flex items-center space-x-4 mb-4">
+                    <label className="text-sm font-medium text-gray-700">Rating:</label>
+                    <select name="rating" value={reviewForm.rating} onChange={onReviewChange} required className="p-2 border rounded-md">
+                        <option value="0">Select</option>
+                        <option value="1">1 ★</option>
+                        <option value="2">2 ★</option>
+                        <option value="3">3 ★</option>
+                        <option value="4">4 ★</option>
+                        <option value="5">5 ★</option>
+                    </select>
+                </div>
+                <div className="mb-4">
+                    <label className="text-sm font-medium text-gray-700">Comment:</label>
+                    <textarea name="comment" value={reviewForm.comment} onChange={onReviewChange} className="mt-1 block w-full p-2 border rounded-md min-h-[100px]"></textarea>
+                </div>
+                <button type="submit" disabled={submittingReview} className="bg-sky-600 text-white font-medium py-2 px-4 rounded-md shadow-sm hover:bg-sky-700 transition-colors disabled:opacity-50">
+                    {submittingReview ? 'Submitting...' : 'Submit Review'}
+                </button>
+              </form>
+            )}
+            {reviews.length === 0 ? (
+              <p className="text-gray-500">Be the first to leave a review!</p>
+            ) : (
+              <div className="space-y-6">
+                {reviews.map(review => (
+                  <div key={review.review_id} className="border-b pb-4">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <img src={review.profile_picture_url || 'https://via.placeholder.com/40'} alt={`${review.first_name}`} className="w-10 h-10 rounded-full object-cover" />
+                      <div>
+                        <p className="font-semibold text-gray-800">{review.first_name} {review.last_name}</p>
+                        <span className="text-sm text-gray-500">{new Date(review.created_at).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    <p className="text-sm font-medium text-gray-700 mb-2">{'★'.repeat(review.rating)}</p>
+                    <p className="text-gray-700">{review.comment}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

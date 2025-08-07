@@ -1,14 +1,20 @@
 import React, { useState } from 'react';
-import apiClient from '../../utils/axiosConfig'; // Import the custom axios instance
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import apiClient from '../../utils/axiosConfig';
 
 function Register() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    username: '', email: '', password: '', firstName: '', lastName: '', role: 'guest',
+    username: '',
+    email: '',
+    password: '',
+    firstName: '',
+    lastName: '',
+    role: 'guest', // Default role
   });
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const navigate = useNavigate();
+  const [submitting, setSubmitting] = useState(false);
 
   const { username, email, password, firstName, lastName, role } = formData;
 
@@ -20,55 +26,106 @@ function Register() {
     e.preventDefault();
     setMessage('');
     setError('');
+    setSubmitting(true);
 
     try {
-      const res = await apiClient.post('/users/register', formData); // Use apiClient
+      const res = await apiClient.post('/users/register', formData);
       setMessage(res.data.message);
-      setFormData({
-        username: '', email: '', password: '', firstName: '', lastName: '', role: 'guest'
-      });
+      setSubmitting(false);
       navigate('/login');
     } catch (err) {
       console.error(err.response?.data || err);
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      setSubmitting(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '50px auto', padding: '20px', border: '1px solid #ccc', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-      <h2>Register</h2>
-      {message && <p style={{ color: 'green' }}>{message}</p>}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      <form onSubmit={onSubmit}>
-        <div style={{ marginBottom: '15px' }}>
-          <label htmlFor="username" style={{ display: 'block', marginBottom: '5px' }}>Username:</label>
-          <input type="text" id="username" name="username" value={username} onChange={onChange} required style={{ width: '100%', padding: '8px', boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: '4px' }} />
-        </div>
-        <div style={{ marginBottom: '15px' }}>
-          <label htmlFor="email" style={{ display: 'block', marginBottom: '5px' }}>Email:</label>
-          <input type="email" id="email" name="email" value={email} onChange={onChange} required style={{ width: '100%', padding: '8px', boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: '4px' }} />
-        </div>
-        <div style={{ marginBottom: '15px' }}>
-          <label htmlFor="password" style={{ display: 'block', marginBottom: '5px' }}>Password:</label>
-          <input type="password" id="password" name="password" value={password} onChange={onChange} required style={{ width: '100%', padding: '8px', boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: '4px' }} />
-        </div>
-        <div style={{ marginBottom: '15px' }}>
-          <label htmlFor="firstName" style={{ display: 'block', marginBottom: '5px' }}>First Name:</label>
-          <input type="text" id="firstName" name="firstName" value={firstName} onChange={onChange} required style={{ width: '100%', padding: '8px', boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: '4px' }} />
-        </div>
-        <div style={{ marginBottom: '15px' }}>
-          <label htmlFor="lastName" style={{ display: 'block', marginBottom: '5px' }}>Last Name:</label>
-          <input type="text" id="lastName" name="lastName" value={lastName} onChange={onChange} required style={{ width: '100%', padding: '8px', boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: '4px' }} />
-        </div>
-        <div style={{ marginBottom: '20px' }}>
-          <label htmlFor="role" style={{ display: 'block', marginBottom: '5px' }}>Register As:</label>
-          <select id="role" name="role" value={role} onChange={onChange} style={{ width: '100%', padding: '8px', boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: '4px' }}>
-            <option value="guest">Guest</option>
-            <option value="host">Host</option>
-          </select>
-        </div>
-        <button type="submit" style={{ width: '100%', padding: '10px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '16px' }}>Register</button>
-      </form>
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
+        <h2 className="text-3xl font-bold text-center text-gray-800 mb-6">Register</h2>
+        {message && <p className="text-green-500 text-center mb-4">{message}</p>}
+        {error && <p className="text-red-500 text-center mb-4">{error}</p>}
+        <form onSubmit={onSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Username:</label>
+            <input
+              type="text"
+              name="username"
+              value={username}
+              onChange={onChange}
+              required
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 text-gray-900 focus:ring-sky-500 focus:border-sky-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Email:</label>
+            <input
+              type="email"
+              name="email"
+              value={email}
+              onChange={onChange}
+              required
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 text-gray-900 focus:ring-sky-500 focus:border-sky-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Password:</label>
+            <input
+              type="password"
+              name="password"
+              value={password}
+              onChange={onChange}
+              required
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 text-gray-900 focus:ring-sky-500 focus:border-sky-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">First Name:</label>
+            <input
+              type="text"
+              name="firstName"
+              value={firstName}
+              onChange={onChange}
+              required
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 text-gray-900 focus:ring-sky-500 focus:border-sky-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Last Name:</label>
+            <input
+              type="text"
+              name="lastName"
+              value={lastName}
+              onChange={onChange}
+              required
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 text-gray-900 focus:ring-sky-500 focus:border-sky-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Register As:</label>
+            <select
+              name="role"
+              value={role}
+              onChange={onChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 text-gray-900 focus:ring-sky-500 focus:border-sky-500"
+            >
+              <option value="guest">Guest</option>
+              <option value="host">Host</option>
+            </select>
+          </div>
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full bg-sky-600 text-white font-medium py-3 px-6 rounded-md shadow-md hover:bg-sky-700 focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 transition-colors disabled:opacity-50"
+          >
+            {submitting ? 'Registering...' : 'Register'}
+          </button>
+        </form>
+        <p className="mt-6 text-center text-sm text-gray-600">
+          Already have an account? <Link to="/login" className="font-medium text-sky-600 hover:text-sky-500">Log in</Link>
+        </p>
+      </div>
     </div>
   );
 }

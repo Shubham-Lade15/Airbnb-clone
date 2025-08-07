@@ -35,46 +35,42 @@ function Trips() {
     }
   }, [location.state]);
 
-  if (loading) return <p>Loading your trips...</p>;
-  if (error) return <p style={{ color: 'red' }}>Error: {error}</p>;
+  if (loading) return <p className="text-center mt-10 text-gray-500">Loading your trips...</p>;
+  if (error) return <p className="text-center mt-10 text-red-500">Error: {error}</p>;
 
   return (
-    <div style={{ padding: '20px' }}>
-      <h1>Your Trips</h1>
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-4xl font-bold text-gray-800 mb-6">Your Trips</h1>
       {bookingMessage && (
-        <p style={{ color: 'green', backgroundColor: '#e6ffe6', padding: '10px', borderRadius: '4px', marginBottom: '20px' }}>
+        <p className="bg-green-100 text-green-700 p-4 rounded-md mb-6 transition-opacity duration-500">
           {bookingMessage}
         </p>
       )}
 
       {bookings.length === 0 ? (
-        <p>You have no upcoming trips. Start exploring and book your first stay! <Link to="/">Browse properties</Link></p>
+        <p className="text-gray-500">You have no upcoming trips. Start exploring and book your first stay! <Link to="/" className="text-sky-600 hover:text-sky-700">Browse properties</Link></p>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
+        <div className="grid grid-cols-1 gap-6">
           {bookings.map(booking => (
-            <div key={booking.booking_id} style={{
-              border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden', display: 'flex',
-              boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
-            }}>
+            <div key={booking.booking_id} className="bg-white rounded-xl shadow-md p-4 flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-6">
               <img
                 src={booking.property_images[0]}
                 alt={booking.property_title}
-                style={{ width: '250px', height: '150px', objectFit: 'cover' }}
+                className="w-full md:w-56 h-40 object-cover rounded-md flex-shrink-0"
               />
-              <div style={{ padding: '15px' }}>
-                <Link to={`/properties/${booking.property_id}`} style={{ textDecoration: 'none', color: '#007bff' }}>
-                  <h4 style={{ margin: '0 0 5px 0' }}>{booking.property_title}</h4>
+              <div className="flex-1">
+                <Link to={`/properties/${booking.property_id}`} className="text-xl font-semibold text-gray-800 hover:text-sky-600">
+                  {booking.property_title}
                 </Link>
-                <p style={{ margin: '0 0 5px 0' }}>{booking.property_city}, {booking.property_country}</p>
-                <p style={{ margin: '0 0 5px 0', fontSize: '0.9em' }}>
-                  Check-in: {new Date(booking.check_in_date).toLocaleDateString()} &mdash; Check-out: {new Date(booking.check_out_date).toLocaleDateString()}
-                </p>
-                <p style={{ margin: '0', fontSize: '0.9em' }}>
-                  Total Guests: {booking.total_guests} | Total Price: ₹{booking.total_price}
-                </p>
-                <p style={{ margin: '0', fontSize: '0.9em', color: '#555' }}>
-                  Hosted by {booking.host_first_name} {booking.host_last_name}
-                </p>
+                <p className="text-gray-600">{booking.property_city}, {booking.property_country}</p>
+                <div className="mt-2 text-gray-700">
+                  <p className="text-sm">Check-in: <span className="font-medium">{new Date(booking.check_in_date).toLocaleDateString()}</span></p>
+                  <p className="text-sm">Check-out: <span className="font-medium">{new Date(booking.check_out_date).toLocaleDateString()}</span></p>
+                  <p className="text-sm mt-1">Total Guests: {booking.total_guests}</p>
+                </div>
+                <div className="mt-4">
+                  <p className="text-lg font-bold text-gray-800">Total Price: ₹{booking.total_price}</p>
+                </div>
               </div>
             </div>
           ))}
