@@ -212,10 +212,12 @@ app.post(
   }
 );
 
-// GET all properties (Publicly Accessible) - Place the general route first
+// GET all properties (Publicly Accessible, with Filtering)
 app.get('/api/properties', async (req, res) => {
+    const { location, checkIn, checkOut, guests } = req.query;
+
     try {
-        const result = await pool.query(`
+        let query = `
             SELECT
                 p.property_id,
                 p.title,
@@ -234,11 +236,43 @@ app.get('/api/properties', async (req, res) => {
             FROM properties p
             JOIN users u ON p.host_id = u.user_id
             WHERE p.is_available = TRUE
-            ORDER BY p.created_at DESC;
-        `);
+        `;
+        const queryValues = [];
+        let paramIndex = 1;
+
+        // Add location filter
+        if (location) {
+            query += ` AND (p.city ILIKE $${paramIndex} OR p.state ILIKE $${paramIndex} OR p.country ILIKE $${paramIndex})`;
+            queryValues.push(`%${location}%`);
+            paramIndex++;
+        }
+
+        // Add guest count filter
+        if (guests) {
+            query += ` AND p.num_guests >= $${paramIndex}`;
+            queryValues.push(parseInt(guests));
+            paramIndex++;
+        }
+
+        // Add date availability filter (the most important part)
+        if (checkIn && checkOut) {
+            query += ` AND NOT EXISTS (
+                SELECT 1 FROM bookings
+                WHERE bookings.property_id = p.property_id
+                  AND (
+                    (bookings.check_in_date, bookings.check_out_date) OVERLAPS ($${paramIndex}::date, $${paramIndex + 1}::date)
+                  )
+            )`;
+            queryValues.push(checkIn, checkOut);
+            paramIndex += 2;
+        }
+
+        query += ` ORDER BY p.created_at DESC;`;
+
+        const result = await pool.query(query, queryValues);
         res.status(200).json(result.rows);
     } catch (error) {
-        console.error('Error fetching properties:', error);
+        console.error('Error fetching properties with filters:', error);
         res.status(500).json({ message: 'Server error fetching properties.' });
     }
 });
