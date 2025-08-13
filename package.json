@@ -1,6 +1,11 @@
 {
-  "dependencies": {
-    "bcryptjs": "^3.0.2",
-    "cors": "^2.8.5"
-  }
+  "name": "airbnb-clone-monorepo",
+  "version": "1.0.0",
+  "description": "Airbnb clone monorepo",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "postinstall": "npm install --prefix client && npm install --prefix server"
+  },
+  "dependencies": {}
 }
